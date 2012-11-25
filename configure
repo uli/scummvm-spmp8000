@@ -853,6 +853,7 @@ Special configuration feature:
                                            ps3 for PlayStation 3
                                            psp for PlayStation Portable
                                            samsungtv for Samsung TV
+                                           spmp8000 for eCos/SPMP8000
                                            webos for HP Palm WebOS
                                            wii for Nintendo Wii
                                            wince for Windows CE
@@ -1364,6 +1365,11 @@ samsungtv)
 	_host_cpu=arm
 	_host_alias=arm-linux-gnueabi
 	;;
+spmp8000)
+	_host_os=spmp8000
+	_host_cpu=arm
+	_host_alias=arm-eabi
+	;;
 webos)
 	_host_os=webos
 	_host_cpu=arm
@@ -1704,7 +1710,7 @@ if test "$have_gcc" = yes ; then
 		case $_host_os in
 		# newlib-based system include files suppress non-C89 function
 		# declarations under __STRICT_ANSI__
-		amigaos* | android | bada | dreamcast | ds | gamecube | mingw* | n64 | psp | ps2 | ps3 | wii | wince )
+		amigaos* | android | bada | dreamcast | ds | gamecube | mingw* | n64 | psp | ps2 | ps3 | wii | wince | spmp8000)
 			;;
 		*)
 			CXXFLAGS="$CXXFLAGS -ansi"
@@ -2201,6 +2207,14 @@ case $_host_os in
 		# Needs -lbind -lsocket for the timidity MIDI driver
 		LIBS="$LIBS -lnsl -lsocket"
 		;;
+	spmp8000)
+		CXXFLAGS="$CXXFLAGS -Wno-psabi -nostdlib -mcpu=arm926ej-s -msoft-float"
+		LDFLAGS="$LDFLAGS -nostdlib -L${LIBGAME} -march=armv5 -msoft-float -nostartfiles -T${LIBGAME}/libgame.ld ${LIBGAME}/start.o"
+		LIBS="$LIBS -lgame -lstdc++ -lc -lgcc"
+		DEFINES="$DEFINES -DSPMP8000"
+		CXXFLAGS="$CXXFLAGS -I${LIBGAME}"
+		DEFINES="$DEFINES -DSYSTEM_NOT_SUPPORTING_D_TYPE"
+		;;
 	webos)
 		CXXFLAGS="$CXXFLAGS --sysroot=$WEBOS_PDK/arm-gcc/sysroot"
 		CXXFLAGS="$CXXFLAGS -I$WEBOS_PDK/include"
@@ -2604,6 +2618,14 @@ if test -n "$_host"; then
 			_mt32emu=no
 			_vkeybd=yes
 			;;
+		spmp8000)
+			_backend="spmp8000"
+			_build_scalers=no
+			_mt32emu=no
+			#_vkeybd=yes
+			_timidity=no
+			_mt32emu=no
+			;;
 		webos)
 			_backend="webos"
 			_port_mk="backends/platform/webos/webos.mk"
@@ -2764,6 +2786,9 @@ case $_backend in
 		LDFLAGS="$LDFLAGS -shared"
 		LDFLAGS="$LDFLAGS -fpic"
 		;;
+	spmp8000)
+		DEFINES="$DEFINES -DUSE_SPMP8000_DRIVER"
+		;;
 	webos)
 		# There is no sdl-config in the WebOS PDK so we don't use find_sdlconfig here.
 		# The PDL library acts as the WebOS device toolchain, and is required to control the virtual keyboard among other OS-level events.
@@ -2875,7 +2900,7 @@ case $_host_os in
 	amigaos* | cygwin* | dreamcast | ds | gamecube | mingw* | n64 | ps2 | ps3 | psp | wii | wince)
 		_posix=no
 		;;
-	android | beos* | bsd* | darwin* | freebsd* | gph-linux | haiku* | hpux* | iphone | irix* | linux* | maemo | mint* | netbsd* | openbsd* | solaris* | sunos* | uclinux* | webos)
+	android | beos* | bsd* | darwin* | freebsd* | gph-linux | haiku* | hpux* | iphone | irix* | linux* | maemo | mint* | netbsd* | openbsd* | solaris* | sunos* | uclinux* | webos | spmp8000)
 		_posix=yes
 		;;
 	os2-emx*)

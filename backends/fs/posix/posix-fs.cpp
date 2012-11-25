@@ -35,7 +35,16 @@
 
 #include <sys/param.h>
 #include <sys/stat.h>
+#if defined(SPMP8000)
+#include <libgame.h>
+#define DIR _ecos_DIR
+#define opendir _ecos_opendir
+#define readdir _ecos_readdir
+#define dirent _ecos_dirent
+#define closedir _ecos_closedir
+#else
 #include <dirent.h>
+#endif
 #include <stdio.h>
 
 #ifdef __OS2__
