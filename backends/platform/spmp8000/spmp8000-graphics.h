@@ -44,6 +44,9 @@ public:
 		gp.src_clip_w = gp.width;
 		gp.src_clip_h = gp.height;
 		emuIfGraphInit(&gp);
+		mouse_x = 10;
+		mouse_y = 10;
+		mouse_visible = true;
 	}
 	virtual ~Spmp8000GraphicsManager() {
 		emuIfGraphCleanup();
@@ -102,6 +105,8 @@ public:
 	}
 	void fillScreen(uint32 col) {}
 	void updateScreen() {
+		fprintf(stderr, "updateScreen\n");
+		gp.pixels[mouse_y * gp.width + mouse_x] = 0xffff;
 		emuIfGraphShow();
 	}
 	void setShakePos(int shakeOffset) {}
@@ -133,16 +138,31 @@ public:
 			fb += gp.width;
 			b += pitch / 2;
 		}
+		gp.pixels[mouse_y * gp.width + mouse_x] = 0xffff;
 		emuIfGraphShow();
 	}
 	int16 getOverlayHeight() { return getHeight(); }
 	int16 getOverlayWidth() { return getWidth(); }
 
-	bool showMouse(bool visible) { return !visible; }
-	void warpMouse(int x, int y) {}
-	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) {}
+	bool showMouse(bool visible) { 
+		bool old = mouse_visible;
+		fprintf(stderr, "showMouse %d -> %d\n", old, visible);
+		mouse_visible = visible;
+		return old;
+	}
+	void warpMouse(int x, int y) {
+		fprintf(stderr, "warpMouse %d/%d\n", x, y);
+		mouse_x = x;
+		mouse_y = y;
+		gp.pixels[mouse_y * gp.width + mouse_x] = 0xffff;
+		emuIfGraphShow();
+	}
+	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) {
+	}
 	void setCursorPalette(const byte *colors, uint start, uint num) {}
-private:
+public:
+	bool mouse_visible;
+	int mouse_x, mouse_y;
 	emu_graph_params_t gp;
 	Graphics::Surface _framebuffer;
 };

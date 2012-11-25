@@ -63,6 +63,8 @@ public:
 
 	virtual void logMessage(LogMessageType::Type type, const char *message);
 	Common::EventSource *getDefaultEventSource() { return this; }
+private:
+	Spmp8000GraphicsManager *gm;
 };
 
 OSystem_SPMP8000::OSystem_SPMP8000() {
@@ -80,13 +82,15 @@ OSystem_SPMP8000::OSystem_SPMP8000() {
 OSystem_SPMP8000::~OSystem_SPMP8000() {
 }
 
+emu_keymap_t keymap;
+
 void OSystem_SPMP8000::initBackend() {
 	fprintf(stderr, "s8kib\n");
 	_mutexManager = new NullMutexManager();
 	_timerManager = new DefaultTimerManager();
 	_eventManager = new DefaultEventManager(this);
 	_savefileManager = new DefaultSaveFileManager();
-	_graphicsManager = new Spmp8000GraphicsManager();
+	_graphicsManager = gm = new Spmp8000GraphicsManager();
 	_mixer = new Audio::MixerImpl(this, 22050);
 
 	((Audio::MixerImpl *)_mixer)->setReady(false);
@@ -96,17 +100,83 @@ void OSystem_SPMP8000::initBackend() {
 	// be functional. Of course, can't do that in a SPMP8000 backend :).
 
 	ModularBackend::initBackend();
+	keymap.controller = 0;
+	emuIfKeyInit(&keymap);
 }
 
+int count = 0;
+uint32_t last_move = 0;
+bool button_down = false;
 bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
-	return false;
+	bool have_event = false;
+	uint32_t keys = emuIfKeyGetInput(&keymap);
+	if (keys & keymap.scancode[EMU_KEY_RIGHT] && getMillis() - last_move > 10) {
+		event.type = Common::EVENT_MOUSEMOVE;
+		if (gm->mouse_x < gm->getWidth())
+			gm->mouse_x++;
+		event.mouse.x = gm->mouse_x;
+		event.mouse.y = gm->mouse_y;
+		have_event = true;
+		last_move = getMillis();
+	}
+	else if (keys & keymap.scancode[EMU_KEY_LEFT] && getMillis() - last_move > 10) {
+		event.type = Common::EVENT_MOUSEMOVE;
+		if (gm->mouse_x > 0)
+			gm->mouse_x--;
+		event.mouse.x = gm->mouse_x;
+		event.mouse.y = gm->mouse_y;
+		have_event = true;
+		last_move = getMillis();
+	}
+	if (keys & keymap.scancode[EMU_KEY_DOWN] && getMillis() - last_move > 10) {
+		event.type = Common::EVENT_MOUSEMOVE;
+		if (gm->mouse_y < gm->getHeight())
+			gm->mouse_y++;
+		event.mouse.x = gm->mouse_x;
+		event.mouse.y = gm->mouse_y;
+		have_event = true;
+		last_move = getMillis();
+	}
+	else if (keys & keymap.scancode[EMU_KEY_UP] && getMillis() - last_move > 10) {
+		event.type = Common::EVENT_MOUSEMOVE;
+		if (gm->mouse_y > 0)
+			gm->mouse_y--;
+		event.mouse.x = gm->mouse_x;
+		event.mouse.y = gm->mouse_y;
+		have_event = true;
+		last_move = getMillis();
+	}
+	if (keys & keymap.scancode[EMU_KEY_O]) {
+		if (!button_down) {
+			button_down = true;
+			event.type = Common::EVENT_LBUTTONDOWN;
+			event.mouse.x = gm->mouse_x;
+			event.mouse.y = gm->mouse_y;
+			have_event = true;
+		}
+	}
+	else if (button_down) {
+		button_down = false;
+		event.type = Common::EVENT_LBUTTONUP;
+		event.mouse.x = gm->mouse_x;
+		event.mouse.y = gm->mouse_y;
+		have_event = true;
+	}
+		
+	if (have_event)
+		fprintf(stderr, "poll event %d keys 0x%x\n", count, keys);
+	if (count > 10000)
+		exit(0);
+	count++;
+	return have_event;
 }
 
 uint32 OSystem_SPMP8000::getMillis() {
-	return 0;
+	return libgame_utime() / 1000;
 }
 
 void OSystem_SPMP8000::delayMillis(uint msecs) {
+	cyg_thread_delay(msecs / 10);
 }
 
 void OSystem_SPMP8000::logMessage(LogMessageType::Type type, const char *message) {
