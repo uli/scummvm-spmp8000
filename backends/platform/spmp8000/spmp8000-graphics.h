@@ -47,6 +47,7 @@ public:
 		mouse_x = 10;
 		mouse_y = 10;
 		mouse_visible = true;
+		bytes_per_pixel = 1;
 	}
 	virtual ~Spmp8000GraphicsManager() {
 		emuIfGraphCleanup();
@@ -68,6 +69,7 @@ public:
 	inline Common::List<Graphics::PixelFormat> getSupportedFormats() const {
 		Common::List<Graphics::PixelFormat> list;
 		list.push_back(Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0));
+		list.push_back(Graphics::PixelFormat::createFormatCLUT8());
 		return list;
 	}
 	void initSize(uint width, uint height, const Graphics::PixelFormat *format = NULL) {}
@@ -78,18 +80,36 @@ public:
 
 	int16 getHeight() { return gDisplayDev->getHeight(); }
 	int16 getWidth() { return gDisplayDev->getWidth(); }
-	void setPalette(const byte *colors, uint start, uint num) {}
+	void setPalette(const byte *colors, uint start, uint num) {
+		int i;
+		for (i = start; i < start + num; i++) {
+			palette[i] = MAKE_RGB565(colors[0], colors[1], colors[2]);
+			colors += 3;
+		}
+	}
 	void grabPalette(byte *colors, uint start, uint num) {}
 	void copyRectToScreen(const void *buf, int pitch, int x, int y, int w, int h) {
-		fprintf(stderr, "copyrect\n");
-		//NativeGE_gameExit();
-		int i;
-		uint16_t *fb = gp.pixels + y * gp.width + x;
-		const uint16_t *b = (const uint16_t *)buf;
-		for (i = 0; i < h; i++) {
-			memcpy(fb, b, w * 2);
-			fb += gp.width;
-			b += pitch / 2;
+		if (bytes_per_pixel == 2) {
+			int i;
+			uint16_t *fb = gp.pixels + y * gp.width + x;
+			const uint16_t *b = (const uint16_t *)buf;
+			for (i = 0; i < h; i++) {
+				memcpy(fb, b, w * 2);
+				fb += gp.width;
+				b += pitch / 2;
+			}
+		}
+		else {
+			int i, j;
+			uint16_t *fb = gp.pixels + y * gp.width + x;
+			const uint8_t *b = (const uint8_t *)buf;
+			for (i = 0; i < h; i++) {
+				for (j = 0; j < w; j++) {
+					fb[j] = palette[b[j]];
+				}
+				fb += gp.width;
+				b += pitch;
+			}
 		}
 	}
 	Graphics::Surface *lockScreen() {
@@ -161,6 +181,8 @@ public:
 	}
 	void setCursorPalette(const byte *colors, uint start, uint num) {}
 public:
+	uint16_t palette[256];
+	int bytes_per_pixel;
 	bool mouse_visible;
 	int mouse_x, mouse_y;
 	emu_graph_params_t gp;

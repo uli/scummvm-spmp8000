@@ -93,7 +93,7 @@ void OSystem_SPMP8000::initBackend() {
 	_graphicsManager = gm = new Spmp8000GraphicsManager();
 	_mixer = new Audio::MixerImpl(this, 22050);
 
-	((Audio::MixerImpl *)_mixer)->setReady(false);
+	((Audio::MixerImpl *)_mixer)->setReady(true);
 
 	// Note that both the mixer and the timer manager are useless
 	// this way; they need to be hooked into the system somehow to
@@ -112,8 +112,8 @@ bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 	uint32_t keys = emuIfKeyGetInput(&keymap);
 	if (keys & keymap.scancode[EMU_KEY_RIGHT] && getMillis() - last_move > 10) {
 		event.type = Common::EVENT_MOUSEMOVE;
-		if (gm->mouse_x < gm->getWidth())
-			gm->mouse_x++;
+		if (gm->mouse_x < gm->getWidth() - 1)
+			gm->mouse_x += 2;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
@@ -130,8 +130,8 @@ bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 	}
 	if (keys & keymap.scancode[EMU_KEY_DOWN] && getMillis() - last_move > 10) {
 		event.type = Common::EVENT_MOUSEMOVE;
-		if (gm->mouse_y < gm->getHeight())
-			gm->mouse_y++;
+		if (gm->mouse_y < gm->getHeight() - 1)
+			gm->mouse_y += 2;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
