@@ -273,6 +273,10 @@ public:
 		emuIfGraphShow();
 	}
 	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) {
+		if (w != _cursorWidth || h != _cursorHeight) {
+			delete[] _cursorBuffer;
+			_cursorBuffer = new uint16_t[w * h];
+		}
 		_cursorWidth = w;
 		_cursorHeight = h;
 		_cursorHotX = hotspotX;
@@ -282,8 +286,6 @@ public:
 		else
 			_cursorKey = _cursorPalette[keycolor & 0xff];
 		_cursorDontScale = dontScale;
-		delete[] _cursorBuffer;
-		_cursorBuffer = new uint16_t[w * h * 2];
 		int i,j;
 		uint16_t *cb = _cursorBuffer;
 		uint8_t *sb = (uint8_t *)buf;
