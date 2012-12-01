@@ -92,9 +92,9 @@ public:
 		_screenStage = new uint16_t[width * height];
 		_screenWidth = width;
 		_screenHeight = height;
-		adbg_printf("====initSize==== %d/%d\n", width, height);
+		//adbg_printf("====initSize==== %d/%d\n", width, height);
 		if (format) {
-			adbg_printf("pixformat %d bytes\n", format->bytesPerPixel);
+			//adbg_printf("pixformat %d bytes\n", format->bytesPerPixel);
 		}
 		mouse_x = width / 2;
 		mouse_y = height / 2;
@@ -261,16 +261,12 @@ public:
 
 	bool showMouse(bool visible) { 
 		bool old = mouse_visible;
-		fprintf(stderr, "showMouse %d -> %d\n", old, visible);
 		mouse_visible = visible;
 		return old;
 	}
 	void warpMouse(int x, int y) {
-		fprintf(stderr, "warpMouse %d/%d\n", x, y);
 		mouse_x = x;
 		mouse_y = y;
-		gp.pixels[mouse_y * gp.width + mouse_x] = 0xffff;
-		emuIfGraphShow();
 	}
 	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) {
 		if (w != _cursorWidth || h != _cursorHeight) {

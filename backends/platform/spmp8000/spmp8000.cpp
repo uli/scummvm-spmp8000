@@ -86,7 +86,6 @@ OSystem_SPMP8000::~OSystem_SPMP8000() {
 emu_keymap_t keymap;
 
 void OSystem_SPMP8000::initBackend() {
-	fprintf(stderr, "s8kib\n");
 	_mutexManager = new NullMutexManager();
 	_timerManager = new DefaultTimerManager();
 	_eventManager = new DefaultEventManager(this);
@@ -235,18 +234,14 @@ int main(int argc, char *argv[]) {
 		stdout = fp;
 	}
 #endif
-	fprintf(stderr, "create\n");
 	g_system = OSystem_SPMP8000_create();
-	fprintf(stderr, "assert\n");
 	assert(g_system);
 
 	libgame_chdir_game();
 	// Invoke the actual ScummVM main entry point:
-	fprintf(stderr, "main\n");
 	foo = (void *)scummvm_main;
 	//goto out;
 	res = scummvm_main(0, 0);
-	fprintf(stderr, "delete\n");
 	delete (OSystem_SPMP8000 *)g_system;
 	
 out:	fclose(stderr);
