@@ -96,6 +96,8 @@ public:
 		if (format) {
 			adbg_printf("pixformat %d bytes\n", format->bytesPerPixel);
 		}
+		mouse_x = width / 2;
+		mouse_y = height / 2;
 	}
 	virtual int getScreenChangeID() const { return 0; }
 
