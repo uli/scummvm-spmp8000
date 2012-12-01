@@ -73,7 +73,7 @@ OSystem_SPMP8000::~OSystem_SPMP8000() {
 
 emu_keymap_t keymap;
 emu_sound_params_t sp;
-uint16_t sound_bufs[2][22050 / 10 * 2 * 2];
+uint16_t sound_bufs[2][22050 / 10 * 2];
 int current_sound_buf = 0;
 
 void OSystem_SPMP8000::updateSound()
