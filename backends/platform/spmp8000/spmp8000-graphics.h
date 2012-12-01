@@ -37,13 +37,12 @@ public:
 	Spmp8000GraphicsManager() {
 		gp.width = getOverlayWidth();
 		gp.height = getOverlayHeight();
-		_overlayBuffer = new uint16_t[gp.width * gp.height];
+		_composedBuffer = new uint16_t[gp.width * gp.height];
 		_overlayStage = new uint16_t[gp.width * gp.height];
 		_screenWidth = 320;
 		_screenHeight = 200;
-		_screenBuffer = new uint16_t[_screenWidth * _screenHeight];
 		_screenStage = new uint16_t[_screenWidth * _screenHeight];
-		gp.pixels = _overlayBuffer;
+		gp.pixels = _composedBuffer;
 		gp.unknown_flag = 0;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
@@ -54,7 +53,7 @@ public:
 		mouse_y = 10;
 		mouse_visible = true;
 		bytes_per_pixel = 1;
-		_overlayShown = false;
+		_overlayShown = true;
 		_cursorBuffer = new uint16_t[1];
 		_cursorBuffer[0] = 0xffff;
 		_cursorHeight = _cursorWidth = 1;
@@ -64,9 +63,8 @@ public:
 	}
 	virtual ~Spmp8000GraphicsManager() {
 		emuIfGraphCleanup();
-		delete[] _overlayBuffer;
+		delete[] _composedBuffer;
 		delete[] _overlayStage;
-		delete[] _screenBuffer;
 		delete[] _screenStage;
 		delete[] _cursorBuffer;
 	}
@@ -90,18 +88,10 @@ public:
 		return list;
 	}
 	void initSize(uint width, uint height, const Graphics::PixelFormat *format = NULL) {
-		delete[] _screenBuffer;
 		delete[] _screenStage;
-		_screenBuffer = new uint16_t[width * height];
 		_screenStage = new uint16_t[width * height];
-		gp.width = _screenWidth = width;
-		gp.height = _screenHeight = height;
-		gp.pixels = _screenBuffer;
-		gp.src_clip_x = 0;
-		gp.src_clip_y = 0;
-		gp.src_clip_w = width;
-		gp.src_clip_h = height;
-		emuIfGraphChgView(&gp);
+		_screenWidth = width;
+		_screenHeight = height;
 		adbg_printf("====initSize==== %d/%d\n", width, height);
 		if (format) {
 			adbg_printf("pixformat %d bytes\n", format->bytesPerPixel);
@@ -167,14 +157,13 @@ public:
 			sw = getOverlayWidth();
 			sh = getOverlayHeight();
 			src = _overlayStage;
-			dst = _overlayBuffer;
 		}
 		else {
 			sw = _screenWidth;
 			sh = _screenHeight;
 			src = _screenStage;
-			dst = _screenBuffer;
 		}
+		dst = _composedBuffer;
 		memcpy(dst, src, sw * sh * 2);
 		if (mouse_visible) {
 			int mx = mouse_x - _cursorHotX;
@@ -218,7 +207,9 @@ public:
 	void showOverlay() {
 		gp.width = getOverlayWidth();
 		gp.height = getOverlayHeight();
-		gp.pixels = _overlayBuffer;
+		delete[] _composedBuffer;
+		_composedBuffer = new uint16_t[gp.width * gp.height * 2];
+		gp.pixels = _composedBuffer;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
 		gp.src_clip_w = gp.width;
@@ -229,7 +220,9 @@ public:
 	void hideOverlay() {
 		gp.width = _screenWidth;
 		gp.height = _screenHeight;
-		gp.pixels = _screenBuffer;
+		delete[] _composedBuffer;
+		_composedBuffer = new uint16_t[gp.width * gp.height * 2];
+		gp.pixels = _composedBuffer;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
 		gp.src_clip_w = gp.width;
@@ -239,7 +232,7 @@ public:
 	}
 	Graphics::PixelFormat getOverlayFormat() const { return Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0); }
 	void clearOverlay() {
-		memset(_overlayBuffer, 0, getOverlayWidth() * getOverlayHeight() * 2);
+		memset(_overlayStage, 0, getOverlayWidth() * getOverlayHeight() * 2);
 	}
 	void grabOverlay(void *buf, int pitch) {
 		int i;
@@ -313,9 +306,8 @@ public:
 	int mouse_x, mouse_y;
 	emu_graph_params_t gp;
 	Graphics::Surface _framebuffer;
-	uint16_t *_overlayBuffer;
+	uint16_t *_composedBuffer;
 	uint16_t *_overlayStage;
-	uint16_t *_screenBuffer;
 	uint16_t *_screenStage;
 	uint _screenWidth, _screenHeight;
 	bool _overlayShown;
