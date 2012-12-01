@@ -43,7 +43,7 @@ public:
 		_overlayStage = new uint16_t[gp.width * gp.height];
 		_screenWidth = 320;
 		_screenHeight = 200;
-		_screenStage = new uint16_t[_screenWidth * _screenHeight];
+		_screenStage16 = new uint16_t[_screenWidth * _screenHeight];
 		gp.pixels = _composedBuffer;
 		gp.unknown_flag = 0;
 		gp.src_clip_x = 0;
@@ -54,7 +54,6 @@ public:
 		mouse_x = 10;
 		mouse_y = 10;
 		mouse_visible = true;
-		bytes_per_pixel = 1;
 		_overlayShown = true;
 		_cursorBuffer = new uint16_t[1];
 		_cursorBuffer[0] = 0xffff;
@@ -67,7 +66,7 @@ public:
 		emuIfGraphCleanup();
 		delete[] _composedBuffer;
 		delete[] _overlayStage;
-		delete[] _screenStage;
+		delete[] _screenStage8;
 		delete[] _cursorBuffer;
 	}
 
@@ -90,14 +89,18 @@ public:
 		return list;
 	}
 	void initSize(uint width, uint height, const Graphics::PixelFormat *format = NULL) {
-		delete[] _screenStage;
-		_screenStage = new uint16_t[width * height];
+		delete[] _screenStage8;
+		if (format && format->bytesPerPixel == 2) {
+			_screenBpp = 2;
+			_screenStage16 = new uint16_t[width * height];
+		}
+		else {
+			_screenBpp = 1;
+			_screenStage8 = new uint8_t[width * height];
+		}
 		_screenWidth = width;
 		_screenHeight = height;
 		//adbg_printf("====initSize==== %d/%d\n", width, height);
-		if (format) {
-			//adbg_printf("pixformat %d bytes\n", format->bytesPerPixel);
-		}
 		mouse_x = width / 2;
 		mouse_y = height / 2;
 	}
@@ -109,18 +112,19 @@ public:
 	int16 getHeight() { return gDisplayDev->getHeight(); }
 	int16 getWidth() { return gDisplayDev->getWidth(); }
 	void setPalette(const byte *colors, uint start, uint num) {
-		int i;
+		uint i;
 		for (i = start; i < start + num; i++) {
 			palette[i] = MAKE_RGB565(colors[0], colors[1], colors[2]);
 			colors += 3;
 		}
+		updateScreen();
 	}
 	void grabPalette(byte *colors, uint start, uint num) {}
 	void copyRectToScreen(const void *buf, int pitch, int x, int y, int w, int h) {
 		//adbg_printf("copyrect\n");
-		if (bytes_per_pixel == 2) {
+		if (_screenBpp == 2) {
 			int i;
-			uint16_t *fb = _screenStage + y * _screenWidth + x;
+			uint16_t *fb = _screenStage16 + y * _screenWidth + x;
 			const uint16_t *b = (const uint16_t *)buf;
 			for (i = 0; i < h; i++) {
 				memcpy(fb, b, w * 2);
@@ -129,13 +133,11 @@ public:
 			}
 		}
 		else {
-			int i, j;
-			uint16_t *fb = _screenStage + y * _screenWidth + x;
+			int i;
+			uint8_t *fb = _screenStage8 + y * _screenWidth + x;
 			const uint8_t *b = (const uint8_t *)buf;
 			for (i = 0; i < h; i++) {
-				for (j = 0; j < w; j++) {
-					fb[j] = palette[b[j]];
-				}
+				memcpy(fb, b, w);
 				fb += _screenWidth;
 				b += pitch;
 			}
@@ -145,12 +147,11 @@ public:
 		_framebuffer.pixels = _screenStage;
 		_framebuffer.w = _screenWidth;
 		_framebuffer.h = _screenHeight;
-		_framebuffer.pitch = _screenWidth * 2;
+		_framebuffer.pitch = _screenWidth * _screenBpp;
 		_framebuffer.format = Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0);
 		return &_framebuffer;
 	}
 	void unlockScreen() {
-		//emuIfGraphShow();
 	}
 	void fillScreen(uint32 col) {}
 	void updateScreen() {
@@ -167,10 +168,23 @@ public:
 		else {
 			sw = _screenWidth;
 			sh = _screenHeight;
-			src = _screenStage;
+			src = _screenStage16;
 		}
 		dst = _composedBuffer;
-		memcpy(dst, src, sw * sh * 2);
+		if (_screenBpp == 2 || _overlayShown)
+			memcpy(dst, src, sw * sh * 2);
+		else {
+			uint8_t *sb = _screenStage8;
+			uint16_t *db = dst;
+			int i, j;
+			for (i = 0; i < sh; i++) {
+				for (j = 0; j < sw; j++) {
+					db[j] = palette[sb[j]];
+				}
+				db += sw;
+				sb += sw;
+			}
+		}
 		if (mouse_visible) {
 			int mx = mouse_x - _cursorHotX;
 			int my = mouse_y - _cursorHotY;
@@ -318,15 +332,14 @@ public:
 public:
 	uint16_t palette[256];
 	uint16_t _cursorPalette[256];
-	int bytes_per_pixel;
 	bool mouse_visible;
 	int mouse_x, mouse_y;
 	emu_graph_params_t gp;
 	Graphics::Surface _framebuffer;
 	uint16_t *_composedBuffer;
 	uint16_t *_overlayStage;
-	uint16_t *_screenStage;
 	uint _screenWidth, _screenHeight;
+	int _screenBpp;
 	bool _overlayShown;
 	uint _cursorWidth;
 	uint _cursorHeight;
@@ -337,6 +350,11 @@ public:
 	uint16_t *_cursorBuffer;
 	uint64_t _lastUpdate;
 	int _mouseMaxX, _mouseMaxY;
+	union {
+		uint16_t *_screenStage16;
+		uint8_t *_screenStage8;
+		void *_screenStage;
+	};
 };
 
 #endif
