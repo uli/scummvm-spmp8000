@@ -37,6 +37,8 @@ public:
 	Spmp8000GraphicsManager() {
 		gp.width = getOverlayWidth();
 		gp.height = getOverlayHeight();
+		_mouseMaxX = gp.width;
+		_mouseMaxY = gp.height;
 		_composedBuffer = new uint16_t[gp.width * gp.height];
 		_overlayStage = new uint16_t[gp.width * gp.height];
 		_screenWidth = 320;
@@ -212,6 +214,12 @@ public:
 	void showOverlay() {
 		gp.width = getOverlayWidth();
 		gp.height = getOverlayHeight();
+		_mouseMaxX = gp.width - 1;
+		_mouseMaxY = gp.height - 1;
+		if (mouse_x > _mouseMaxX)
+			mouse_x = _mouseMaxX;
+		if (mouse_y > _mouseMaxY)
+			mouse_y = _mouseMaxY;
 		delete[] _composedBuffer;
 		_composedBuffer = new uint16_t[gp.width * gp.height];
 		gp.pixels = _composedBuffer;
@@ -225,6 +233,12 @@ public:
 	void hideOverlay() {
 		gp.width = _screenWidth;
 		gp.height = _screenHeight;
+		_mouseMaxX = gp.width - 1;
+		_mouseMaxY = gp.height - 1;
+		if (mouse_x > _mouseMaxX)
+			mouse_x = _mouseMaxX;
+		if (mouse_y > _mouseMaxY)
+			mouse_y = _mouseMaxY;
 		delete[] _composedBuffer;
 		_composedBuffer = new uint16_t[gp.width * gp.height];
 		gp.pixels = _composedBuffer;
@@ -322,6 +336,7 @@ public:
 	bool _cursorDontScale;
 	uint16_t *_cursorBuffer;
 	uint64_t _lastUpdate;
+	int _mouseMaxX, _mouseMaxY;
 };
 
 #endif
