@@ -240,6 +240,7 @@ int main(int argc, char *argv[]) {
 	fprintf(stderr, "assert\n");
 	assert(g_system);
 
+	libgame_chdir_game();
 	// Invoke the actual ScummVM main entry point:
 	fprintf(stderr, "main\n");
 	foo = (void *)scummvm_main;
