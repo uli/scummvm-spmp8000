@@ -58,8 +58,10 @@ public:
 	virtual void logMessage(LogMessageType::Type type, const char *message);
 	Common::EventSource *getDefaultEventSource() { return this; }
 private:
+	void updateSound(void);
 	Spmp8000GraphicsManager *gm;
 	bool keyEvent(Common::Event &event, uint32_t keys, int emu_key, Common::KeyCode keycode, int ascii);
+	uint64_t _lastMix;
 };
 
 OSystem_SPMP8000::OSystem_SPMP8000() {
@@ -70,6 +72,20 @@ OSystem_SPMP8000::~OSystem_SPMP8000() {
 }
 
 emu_keymap_t keymap;
+emu_sound_params_t sp;
+uint16_t sound_bufs[2][22050 / 10 * 2 * 2];
+int current_sound_buf = 0;
+
+void OSystem_SPMP8000::updateSound()
+{
+	if (libgame_utime() < _lastMix + 60000)
+		return;
+	current_sound_buf = (current_sound_buf + 1) % 2;
+	((Audio::MixerImpl *)_mixer)->mixCallback((byte *)sound_bufs[current_sound_buf], 22050 / 10 * 2 * 2);
+	sp.buf = (uint8_t *)sound_bufs[current_sound_buf];
+	emuIfSoundPlay(&sp);
+	_lastMix = libgame_utime();
+}
 
 void OSystem_SPMP8000::initBackend() {
 	_mutexManager = new NullMutexManager();
@@ -78,6 +94,14 @@ void OSystem_SPMP8000::initBackend() {
 	_savefileManager = new DefaultSaveFileManager();
 	_graphicsManager = gm = new Spmp8000GraphicsManager();
 	_mixer = new Audio::MixerImpl(this, 22050);
+
+	sp.rate = 22050;
+	sp.channels = 2;
+	sp.buf_size = 22050 / 10 * 2 * 2;
+	sp.depth = 0;
+	sp.callback = 0;
+	emuIfSoundInit(&sp);
+	_lastMix = 0;
 
 	((Audio::MixerImpl *)_mixer)->setReady(true);
 
@@ -112,6 +136,7 @@ bool OSystem_SPMP8000::keyEvent(Common::Event &event, uint32_t keys, int emu_key
 }
 
 bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
+	updateSound();
 	bool have_event = false;
 	uint32_t keys = emuIfKeyGetInput(&keymap);
 	if (keyEvent(event, keys, EMU_KEY_START, Common::KEYCODE_F5, Common::ASCII_F5)) {
