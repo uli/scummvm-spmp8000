@@ -35,9 +35,15 @@ static const OSystem::GraphicsMode s_supportedGraphicsModes[] = {
 class Spmp8000GraphicsManager : public GraphicsManager {
 public:
 	Spmp8000GraphicsManager() {
-		gp.width = getWidth();
-		gp.height = getHeight();
-		gp.pixels = new uint16_t[gp.width * gp.height];
+		gp.width = getOverlayWidth();
+		gp.height = getOverlayHeight();
+		_overlayBuffer = new uint16_t[gp.width * gp.height];
+		_overlayStage = new uint16_t[gp.width * gp.height];
+		_screenWidth = 320;
+		_screenHeight = 200;
+		_screenBuffer = new uint16_t[_screenWidth * _screenHeight];
+		_screenStage = new uint16_t[_screenWidth * _screenHeight];
+		gp.pixels = _overlayBuffer;
 		gp.unknown_flag = 0;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
@@ -48,10 +54,21 @@ public:
 		mouse_y = 10;
 		mouse_visible = true;
 		bytes_per_pixel = 1;
+		_overlayShown = false;
+		_cursorBuffer = new uint16_t[1];
+		_cursorBuffer[0] = 0xffff;
+		_cursorHeight = _cursorWidth = 1;
+		_cursorHotX = _cursorHotY = 0;
+		_cursorDontScale = false;
+		_cursorKey = 0;
 	}
 	virtual ~Spmp8000GraphicsManager() {
 		emuIfGraphCleanup();
-		delete[] gp.pixels;
+		delete[] _overlayBuffer;
+		delete[] _overlayStage;
+		delete[] _screenBuffer;
+		delete[] _screenStage;
+		delete[] _cursorBuffer;
 	}
 
 	bool hasFeature(OSystem::Feature f) { return false; }
@@ -72,7 +89,24 @@ public:
 		list.push_back(Graphics::PixelFormat::createFormatCLUT8());
 		return list;
 	}
-	void initSize(uint width, uint height, const Graphics::PixelFormat *format = NULL) {}
+	void initSize(uint width, uint height, const Graphics::PixelFormat *format = NULL) {
+		delete[] _screenBuffer;
+		delete[] _screenStage;
+		_screenBuffer = new uint16_t[width * height];
+		_screenStage = new uint16_t[width * height];
+		gp.width = _screenWidth = width;
+		gp.height = _screenHeight = height;
+		gp.pixels = _screenBuffer;
+		gp.src_clip_x = 0;
+		gp.src_clip_y = 0;
+		gp.src_clip_w = width;
+		gp.src_clip_h = height;
+		emuIfGraphChgView(&gp);
+		adbg_printf("====initSize==== %d/%d\n", width, height);
+		if (format) {
+			adbg_printf("pixformat %d bytes\n", format->bytesPerPixel);
+		}
+	}
 	virtual int getScreenChangeID() const { return 0; }
 
 	void beginGFXTransaction() {}
@@ -89,77 +123,143 @@ public:
 	}
 	void grabPalette(byte *colors, uint start, uint num) {}
 	void copyRectToScreen(const void *buf, int pitch, int x, int y, int w, int h) {
+		//adbg_printf("copyrect\n");
 		if (bytes_per_pixel == 2) {
 			int i;
-			uint16_t *fb = gp.pixels + y * gp.width + x;
+			uint16_t *fb = _screenStage + y * _screenWidth + x;
 			const uint16_t *b = (const uint16_t *)buf;
 			for (i = 0; i < h; i++) {
 				memcpy(fb, b, w * 2);
-				fb += gp.width;
+				fb += _screenWidth;
 				b += pitch / 2;
 			}
 		}
 		else {
 			int i, j;
-			uint16_t *fb = gp.pixels + y * gp.width + x;
+			uint16_t *fb = _screenStage + y * _screenWidth + x;
 			const uint8_t *b = (const uint8_t *)buf;
 			for (i = 0; i < h; i++) {
 				for (j = 0; j < w; j++) {
 					fb[j] = palette[b[j]];
 				}
-				fb += gp.width;
+				fb += _screenWidth;
 				b += pitch;
 			}
 		}
 	}
 	Graphics::Surface *lockScreen() {
-		_framebuffer.pixels = gp.pixels;
-		_framebuffer.w = gp.width;
-		_framebuffer.h = gp.height;
-		_framebuffer.pitch = gp.width * 2;
+		_framebuffer.pixels = _screenStage;
+		_framebuffer.w = _screenWidth;
+		_framebuffer.h = _screenHeight;
+		_framebuffer.pitch = _screenWidth * 2;
 		_framebuffer.format = Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0);
 		return &_framebuffer;
 	}
 	void unlockScreen() {
-		emuIfGraphShow();
+		//emuIfGraphShow();
 	}
 	void fillScreen(uint32 col) {}
 	void updateScreen() {
-		fprintf(stderr, "updateScreen\n");
-		gp.pixels[mouse_y * gp.width + mouse_x] = 0xffff;
+		//adbg_printf("updateScreen\n");
+		int sw, sh;
+		uint16_t *src, *dst;
+		if (_overlayShown) {
+			sw = getOverlayWidth();
+			sh = getOverlayHeight();
+			src = _overlayStage;
+			dst = _overlayBuffer;
+		}
+		else {
+			sw = _screenWidth;
+			sh = _screenHeight;
+			src = _screenStage;
+			dst = _screenBuffer;
+		}
+		memcpy(dst, src, sw * sh * 2);
+		if (mouse_visible) {
+			int mx = mouse_x - _cursorHotX;
+			int my = mouse_y - _cursorHotY;
+			uint16_t *mb = _cursorBuffer;
+			int mw = _cursorWidth;
+			int mh = _cursorHeight;
+			if (mx < 0) {
+				mw -= -mx;
+				mb += -mx;
+				mx = 0;
+			}
+			else if (mx + mw > sw) {
+				mw -= mx + mw - sw;
+			}
+			if (my < 0) {
+				mh -= -my;
+				mb += (-my) * _cursorWidth;
+				my = 0;
+			}
+			else if (my + mh > sh) {
+				mh -= my + mh - sh;
+			}
+			uint16_t *dm = dst + mx + my * sw;
+			int i,j;
+			for (i = 0; i < mh; i++) {
+				for (j = 0; j < mw; j++) {
+					if (mb[j] != _cursorKey)
+						dm[j] = mb[j];
+				}
+				dm += sw;
+				mb += _cursorWidth;
+			}
+		}
 		emuIfGraphShow();
 	}
 	void setShakePos(int shakeOffset) {}
 	void setFocusRectangle(const Common::Rect& rect) {}
 	void clearFocusRectangle() {}
 
-	void showOverlay() {}
-	void hideOverlay() {}
+	void showOverlay() {
+		gp.width = getOverlayWidth();
+		gp.height = getOverlayHeight();
+		gp.pixels = _overlayBuffer;
+		gp.src_clip_x = 0;
+		gp.src_clip_y = 0;
+		gp.src_clip_w = gp.width;
+		gp.src_clip_h = gp.height;
+		emuIfGraphChgView(&gp);
+		_overlayShown = true;
+	}
+	void hideOverlay() {
+		gp.width = _screenWidth;
+		gp.height = _screenHeight;
+		gp.pixels = _screenBuffer;
+		gp.src_clip_x = 0;
+		gp.src_clip_y = 0;
+		gp.src_clip_w = gp.width;
+		gp.src_clip_h = gp.height;
+		emuIfGraphChgView(&gp);
+		_overlayShown = false;
+	}
 	Graphics::PixelFormat getOverlayFormat() const { return Graphics::PixelFormat(2, 5, 6, 5, 0, 11, 5, 0, 0); }
 	void clearOverlay() {
-		memset(gp.pixels, 0, gp.width * gp.height * 2);
+		memset(_overlayBuffer, 0, getOverlayWidth() * getOverlayHeight() * 2);
 	}
 	void grabOverlay(void *buf, int pitch) {
 		int i;
-		uint16_t *fb = gp.pixels;
+		uint16_t *fb = _overlayStage;
 		uint16_t *b = (uint16_t *)buf;
-		for (i = 0; i < gp.height; i++) {
-			memcpy(b, fb, gp.width * 2);
-			fb += gp.width;
+		for (i = 0; i < getOverlayHeight(); i++) {
+			memcpy(b, fb, getOverlayWidth() * 2);
+			fb += getOverlayWidth();
 			b += pitch / 2;
 		}
 	}
 	void copyRectToOverlay(const void *buf, int pitch, int x, int y, int w, int h) {
 		int i;
-		uint16_t *fb = gp.pixels + y * gp.width + x;
+		uint16_t *fb = _overlayStage + y * getOverlayWidth() + x;
 		const uint16_t *b = (const uint16_t *)buf;
 		for (i = 0; i < h; i++) {
 			memcpy(fb, b, w * 2);
-			fb += gp.width;
+			fb += getOverlayWidth();
 			b += pitch / 2;
 		}
-		gp.pixels[mouse_y * gp.width + mouse_x] = 0xffff;
-		emuIfGraphShow();
 	}
 	int16 getOverlayHeight() { return getHeight(); }
 	int16 getOverlayWidth() { return getWidth(); }
@@ -178,15 +278,54 @@ public:
 		emuIfGraphShow();
 	}
 	void setMouseCursor(const void *buf, uint w, uint h, int hotspotX, int hotspotY, uint32 keycolor, bool dontScale = false, const Graphics::PixelFormat *format = NULL) {
+		_cursorWidth = w;
+		_cursorHeight = h;
+		_cursorHotX = hotspotX;
+		_cursorHotY = hotspotY;
+		if (format && format->bytesPerPixel == 2)
+			_cursorKey = keycolor & 0xffff;
+		else
+			_cursorKey = _cursorPalette[keycolor & 0xff];
+		_cursorDontScale = dontScale;
+		delete[] _cursorBuffer;
+		_cursorBuffer = new uint16_t[w * h * 2];
+		int i,j;
+		uint16_t *cb = _cursorBuffer;
+		uint8_t *sb = (uint8_t *)buf;
+		for (i = 0; i < h; i++) {
+			for (j = 0; j < w; j++) {
+				*cb++ = _cursorPalette[*sb++];
+			}
+		}
 	}
-	void setCursorPalette(const byte *colors, uint start, uint num) {}
+	void setCursorPalette(const byte *colors, uint start, uint num) {
+		int i;
+		for (i = start; i < start + num; i++) {
+			_cursorPalette[i] = MAKE_RGB565(colors[0], colors[1], colors[2]);
+			colors += 3;
+		}
+	}
 public:
 	uint16_t palette[256];
+	uint16_t _cursorPalette[256];
 	int bytes_per_pixel;
 	bool mouse_visible;
 	int mouse_x, mouse_y;
 	emu_graph_params_t gp;
 	Graphics::Surface _framebuffer;
+	uint16_t *_overlayBuffer;
+	uint16_t *_overlayStage;
+	uint16_t *_screenBuffer;
+	uint16_t *_screenStage;
+	uint _screenWidth, _screenHeight;
+	bool _overlayShown;
+	uint _cursorWidth;
+	uint _cursorHeight;
+	uint _cursorHotX;
+	uint _cursorHotY;
+	uint32 _cursorKey;
+	bool _cursorDontScale;
+	uint16_t *_cursorBuffer;
 };
 
 #endif
