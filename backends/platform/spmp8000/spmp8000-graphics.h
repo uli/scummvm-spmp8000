@@ -152,6 +152,8 @@ public:
 	}
 	void fillScreen(uint32 col) {}
 	void updateScreen() {
+		if (libgame_utime() - _lastUpdate < 33333)
+			return;
 		//adbg_printf("updateScreen\n");
 		int sw, sh;
 		uint16_t *src, *dst;
@@ -201,6 +203,7 @@ public:
 			}
 		}
 		emuIfGraphShow();
+		_lastUpdate = libgame_utime();
 	}
 	void setShakePos(int shakeOffset) {}
 	void setFocusRectangle(const Common::Rect& rect) {}
@@ -318,6 +321,7 @@ public:
 	uint32 _cursorKey;
 	bool _cursorDontScale;
 	uint16_t *_cursorBuffer;
+	uint64_t _lastUpdate;
 };
 
 #endif
