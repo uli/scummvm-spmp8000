@@ -1258,7 +1258,9 @@ void ScummEngine::saveOrLoad(Serializer *s) {
 			}
 			s->saveUint16(0xFFFF);	// End marker
 		} else {
-			while ((type = (ResType)s->loadUint16()) != 0xFFFF) {
+			int t;
+			while ((t = s->loadUint16()) != 0xFFFF) {
+				type = (ResType)t;
 				while ((idx = s->loadUint16()) != 0xFFFF) {
 					assert(idx < _res->_types[type].size());
 					loadResource(s, type, idx);
