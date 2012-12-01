@@ -313,9 +313,9 @@ public:
 		else
 			_cursorKey = _cursorPalette[keycolor & 0xff];
 		_cursorDontScale = dontScale;
-		int i,j;
+		uint i,j;
 		uint16_t *cb = _cursorBuffer;
-		uint8_t *sb = (uint8_t *)buf;
+		const uint8_t *sb = (const uint8_t *)buf;
 		for (i = 0; i < h; i++) {
 			for (j = 0; j < w; j++) {
 				*cb++ = _cursorPalette[*sb++];
@@ -323,7 +323,7 @@ public:
 		}
 	}
 	void setCursorPalette(const byte *colors, uint start, uint num) {
-		int i;
+		uint i;
 		for (i = start; i < start + num; i++) {
 			_cursorPalette[i] = MAKE_RGB565(colors[0], colors[1], colors[2]);
 			colors += 3;

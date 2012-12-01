@@ -266,7 +266,6 @@ OSystem *OSystem_SPMP8000_create() {
 	return new OSystem_SPMP8000();
 }
 
-void *foo;
 int main(int argc, char *argv[]) {
 	int res = 0;
 	libgame_init();
@@ -286,12 +285,10 @@ int main(int argc, char *argv[]) {
 
 	libgame_chdir_game();
 	// Invoke the actual ScummVM main entry point:
-	foo = (void *)scummvm_main;
-	//goto out;
 	res = scummvm_main(0, 0);
 	delete (OSystem_SPMP8000 *)g_system;
 	
-out:	fclose(stderr);
+	fclose(stderr);
 	fclose(stdout);
 	return res;
 }
