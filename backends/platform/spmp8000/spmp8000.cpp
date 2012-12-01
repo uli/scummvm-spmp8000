@@ -136,10 +136,18 @@ bool OSystem_SPMP8000::keyEvent(Common::Event &event, uint32_t keys, int emu_key
 	return false;
 }
 
+#define MOUSE_ACCEL_DIVIDER 4
+int mouse_accel = MOUSE_ACCEL_DIVIDER;
 bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 	updateSound();
 	bool have_event = false;
 	uint32_t keys = emuIfKeyGetInput(&keymap);
+	uint32_t directions = keys & (keymap.scancode[EMU_KEY_UP] |
+				      keymap.scancode[EMU_KEY_DOWN] |
+				      keymap.scancode[EMU_KEY_LEFT] |
+				      keymap.scancode[EMU_KEY_RIGHT]);
+	if (!directions)
+		mouse_accel = MOUSE_ACCEL_DIVIDER;
 	if (keyEvent(event, keys, EMU_KEY_START, Common::KEYCODE_F5, Common::ASCII_F5)) {
 		have_event = true;
 		goto done;
@@ -148,41 +156,45 @@ bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 		have_event = true;
 		goto done;
 	}
-	if (keys & keymap.scancode[EMU_KEY_RIGHT] && getMillis() - last_move > 3) {
+	if (keys & keymap.scancode[EMU_KEY_RIGHT] && getMillis() - last_move > 1) {
 		event.type = Common::EVENT_MOUSEMOVE;
-		if (gm->mouse_x < gm->getWidth() - 1)
-			gm->mouse_x++;
+		if (gm->mouse_x + mouse_accel / MOUSE_ACCEL_DIVIDER > gm->_mouseMaxX)
+			gm->mouse_x = gm->_mouseMaxX;
+		else
+			gm->mouse_x += mouse_accel / MOUSE_ACCEL_DIVIDER;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
-		last_move = getMillis();
 	}
-	else if (keys & keymap.scancode[EMU_KEY_LEFT] && getMillis() - last_move > 3) {
+	else if (keys & keymap.scancode[EMU_KEY_LEFT] && getMillis() - last_move > 1) {
 		event.type = Common::EVENT_MOUSEMOVE;
-		if (gm->mouse_x > 0)
-			gm->mouse_x--;
+		if (gm->mouse_x - mouse_accel / MOUSE_ACCEL_DIVIDER < 0)
+			gm->mouse_x = 0;
+		else
+			gm->mouse_x -= mouse_accel / MOUSE_ACCEL_DIVIDER;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
-		last_move = getMillis();
 	}
-	if (keys & keymap.scancode[EMU_KEY_DOWN] && getMillis() - last_move > 3) {
+	if (keys & keymap.scancode[EMU_KEY_DOWN] && getMillis() - last_move > 1) {
 		event.type = Common::EVENT_MOUSEMOVE;
-		if (gm->mouse_y < gm->getHeight() - 1)
-			gm->mouse_y++;
+		if (gm->mouse_y + mouse_accel / MOUSE_ACCEL_DIVIDER > gm->_mouseMaxY)
+			gm->mouse_y = gm->_mouseMaxY;
+		else
+			gm->mouse_y += mouse_accel / MOUSE_ACCEL_DIVIDER;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
-		last_move = getMillis();
 	}
-	else if (keys & keymap.scancode[EMU_KEY_UP] && getMillis() - last_move > 3) {
+	else if (keys & keymap.scancode[EMU_KEY_UP] && getMillis() - last_move > 1) {
 		event.type = Common::EVENT_MOUSEMOVE;
-		if (gm->mouse_y > 0)
-			gm->mouse_y--;
+		if (gm->mouse_y - mouse_accel / MOUSE_ACCEL_DIVIDER < 0)
+			gm->mouse_y = 0;
+		else
+			gm->mouse_y -= mouse_accel / MOUSE_ACCEL_DIVIDER;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
-		last_move = getMillis();
 	}
 	if (keys & keymap.scancode[EMU_KEY_O]) {
 		if (!lbutton_down) {
@@ -217,6 +229,13 @@ bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 		have_event = true;
 	}
 	
+	if (have_event) {
+		if (event.type == Common::EVENT_MOUSEMOVE) {
+			last_move = getMillis();
+			if (mouse_accel < 4 * MOUSE_ACCEL_DIVIDER)
+				mouse_accel++;
+		}
+	}
 done:
 	count++;
 	last_keys = keys;
