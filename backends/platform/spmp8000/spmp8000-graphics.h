@@ -210,7 +210,7 @@ public:
 		gp.width = getOverlayWidth();
 		gp.height = getOverlayHeight();
 		delete[] _composedBuffer;
-		_composedBuffer = new uint16_t[gp.width * gp.height * 2];
+		_composedBuffer = new uint16_t[gp.width * gp.height];
 		gp.pixels = _composedBuffer;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
@@ -223,7 +223,7 @@ public:
 		gp.width = _screenWidth;
 		gp.height = _screenHeight;
 		delete[] _composedBuffer;
-		_composedBuffer = new uint16_t[gp.width * gp.height * 2];
+		_composedBuffer = new uint16_t[gp.width * gp.height];
 		gp.pixels = _composedBuffer;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
