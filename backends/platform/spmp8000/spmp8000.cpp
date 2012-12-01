@@ -40,13 +40,7 @@
 /*
  * Include header files needed for the getFilesystemFactory() method.
  */
-#if defined(__amigaos4__)
-	#include "backends/fs/amigaos4/amigaos4-fs-factory.h"
-#elif defined(POSIX)
-	#include "backends/fs/posix/posix-fs-factory.h"
-#elif defined(WIN32)
-	#include "backends/fs/windows/windows-fs-factory.h"
-#endif
+#include "backends/fs/posix/posix-fs-factory.h"
 
 class OSystem_SPMP8000 : public ModularBackend, Common::EventSource {
 public:
@@ -69,15 +63,7 @@ private:
 };
 
 OSystem_SPMP8000::OSystem_SPMP8000() {
-	#if defined(__amigaos4__)
-		_fsFactory = new AmigaOSFilesystemFactory();
-	#elif defined(POSIX)
-		_fsFactory = new POSIXFilesystemFactory();
-	#elif defined(WIN32)
-		_fsFactory = new WindowsFilesystemFactory();
-	#else
-		#error Unknown and unsupported FS backend
-	#endif
+	_fsFactory = new POSIXFilesystemFactory();
 }
 
 OSystem_SPMP8000::~OSystem_SPMP8000() {
