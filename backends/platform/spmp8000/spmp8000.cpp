@@ -65,6 +65,7 @@ public:
 	Common::EventSource *getDefaultEventSource() { return this; }
 private:
 	Spmp8000GraphicsManager *gm;
+	bool keyEvent(Common::Event &event, uint32_t keys, int emu_key, Common::KeyCode keycode, int ascii);
 };
 
 OSystem_SPMP8000::OSystem_SPMP8000() {
@@ -107,9 +108,35 @@ void OSystem_SPMP8000::initBackend() {
 int count = 0;
 uint32_t last_move = 0;
 bool button_down = false;
+uint32_t last_keys = 0;
+bool OSystem_SPMP8000::keyEvent(Common::Event &event, uint32_t keys, int emu_key, Common::KeyCode keycode, int ascii)
+{
+	if (keys & keymap.scancode[emu_key] && !(last_keys & keymap.scancode[emu_key])) {
+		event.type = Common::EVENT_KEYDOWN;
+		event.kbd.keycode = keycode;
+		event.kbd.ascii = ascii;
+		return true;
+	}
+	else if (!(keys & keymap.scancode[emu_key]) && last_keys & keymap.scancode[emu_key]) {
+		event.type = Common::EVENT_KEYUP;
+		event.kbd.keycode = keycode;
+		event.kbd.ascii = ascii;
+		return true;
+	}
+	return false;
+}
+
 bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 	bool have_event = false;
 	uint32_t keys = emuIfKeyGetInput(&keymap);
+	if (keyEvent(event, keys, EMU_KEY_START, Common::KEYCODE_F5, Common::ASCII_F5)) {
+		have_event = true;
+		goto done;
+	}
+	if (keyEvent(event, keys, EMU_KEY_SELECT, Common::KEYCODE_ESCAPE, 27)) {
+		have_event = true;
+		goto done;
+	}
 	if (keys & keymap.scancode[EMU_KEY_RIGHT] && getMillis() - last_move > 10) {
 		event.type = Common::EVENT_MOUSEMOVE;
 		if (gm->mouse_x < gm->getWidth() - 1)
@@ -163,11 +190,9 @@ bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 		have_event = true;
 	}
 		
-	if (have_event)
-		fprintf(stderr, "poll event %d keys 0x%x\n", count, keys);
-	if (count > 10000)
-		exit(0);
+done:
 	count++;
+	last_keys = keys;
 	return have_event;
 }
 
