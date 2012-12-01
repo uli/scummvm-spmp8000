@@ -10,3 +10,5 @@ MODULE_OBJS := \
 MODULE_OBJS := $(addprefix $(MODULE)/, $(MODULE_OBJS))
 OBJS := $(MODULE_OBJS) $(OBJS)
 MODULE_DIRS += $(sort $(dir $(MODULE_OBJS)))
+
+LIBS += -lm
