@@ -116,7 +116,8 @@ void OSystem_SPMP8000::initBackend() {
 
 int count = 0;
 uint32_t last_move = 0;
-bool button_down = false;
+bool lbutton_down = false;
+bool rbutton_down = false;
 uint32_t last_keys = 0;
 bool OSystem_SPMP8000::keyEvent(Common::Event &event, uint32_t keys, int emu_key, Common::KeyCode keycode, int ascii)
 {
@@ -184,22 +185,38 @@ bool OSystem_SPMP8000::pollEvent(Common::Event &event) {
 		last_move = getMillis();
 	}
 	if (keys & keymap.scancode[EMU_KEY_O]) {
-		if (!button_down) {
-			button_down = true;
+		if (!lbutton_down) {
+			lbutton_down = true;
 			event.type = Common::EVENT_LBUTTONDOWN;
 			event.mouse.x = gm->mouse_x;
 			event.mouse.y = gm->mouse_y;
 			have_event = true;
 		}
 	}
-	else if (button_down) {
-		button_down = false;
+	else if (lbutton_down) {
+		lbutton_down = false;
 		event.type = Common::EVENT_LBUTTONUP;
 		event.mouse.x = gm->mouse_x;
 		event.mouse.y = gm->mouse_y;
 		have_event = true;
 	}
-		
+	if (keys & keymap.scancode[EMU_KEY_X]) {
+		if (!rbutton_down) {
+			rbutton_down = true;
+			event.type = Common::EVENT_RBUTTONDOWN;
+			event.mouse.x = gm->mouse_x;
+			event.mouse.y = gm->mouse_y;
+			have_event = true;
+		}
+	}
+	else if (rbutton_down) {
+		rbutton_down = false;
+		event.type = Common::EVENT_RBUTTONUP;
+		event.mouse.x = gm->mouse_x;
+		event.mouse.y = gm->mouse_y;
+		have_event = true;
+	}
+	
 done:
 	count++;
 	last_keys = keys;
