@@ -269,6 +269,12 @@ OSystem *OSystem_SPMP8000_create() {
 int main(int argc, char *argv[]) {
 	int res = 0;
 	libgame_init();
+
+	uint16_t *orig_fb = gDisplayDev->getFrameBuffer();
+	uint16_t *orig_sb = gDisplayDev->getShadowBuffer();
+	/* disable double buffering */
+	gDisplayDev->setShadowBuffer(orig_fb);
+
 	FILE *fp = fopen("scummvm_stderr.txt", "w");
 	if (fp) {
 		stderr = fp;
@@ -287,9 +293,14 @@ int main(int argc, char *argv[]) {
 	// Invoke the actual ScummVM main entry point:
 	res = scummvm_main(0, 0);
 	delete (OSystem_SPMP8000 *)g_system;
-	
+
 	fclose(stderr);
 	fclose(stdout);
+
+	/* re-enable double buffering */
+	gDisplayDev->setFrameBuffer(orig_fb);
+	gDisplayDev->setShadowBuffer(orig_sb);
+
 	return res;
 }
 
