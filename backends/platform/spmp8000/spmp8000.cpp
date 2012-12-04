@@ -21,6 +21,7 @@
  */
 
 #include <libgame.h>
+#include <mcatch_cmd.h>
 
 #define FORBIDDEN_SYMBOL_ALLOW_ALL
 
@@ -53,7 +54,18 @@ public:
 
 	virtual uint32 getMillis();
 	virtual void delayMillis(uint msecs);
-	virtual void getTimeAndDate(TimeDate &t) const {}
+
+	virtual void getTimeAndDate(TimeDate &t) const {
+		mcatch_system_time_t time;
+		SPMP_SendSignal(MCATCH_CMD_SYSTEM_SYS_TIME_GET, &time, sizeof(time));
+		t.tm_year = time.year - 1900;
+		t.tm_mon = time.month - 1;
+		t.tm_mday = time.day;
+		t.tm_hour = time.hour;
+		t.tm_min = time.min;
+		t.tm_sec = time.sec;
+		t.tm_wday = 0;
+	}
 
 	virtual void logMessage(LogMessageType::Type type, const char *message);
 	Common::EventSource *getDefaultEventSource() { return this; }
