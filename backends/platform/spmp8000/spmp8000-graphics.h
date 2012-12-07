@@ -45,7 +45,7 @@ public:
 		_screenHeight = 200;
 		_screenStage16 = new uint16_t[_screenWidth * _screenHeight];
 		gp.pixels = _composedBuffer;
-		gp.unknown_flag = 0;
+		gp.has_palette = 0;
 		gp.src_clip_x = 0;
 		gp.src_clip_y = 0;
 		gp.src_clip_w = gp.width;
