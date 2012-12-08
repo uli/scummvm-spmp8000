@@ -2208,9 +2208,8 @@ case $_host_os in
 		LIBS="$LIBS -lnsl -lsocket"
 		;;
 	spmp8000)
-		CXXFLAGS="$CXXFLAGS -Wno-psabi -nostdlib -mcpu=arm926ej-s -msoft-float"
-		LDFLAGS="$LDFLAGS -L${LIBGAME} -march=armv5 -msoft-float -nostartfiles -T${LIBGAME}/libgame.ld ${LIBGAME}/start.o"
-		LIBS="$LIBS -lgame -lstdc++"
+		CXXFLAGS="$CXXFLAGS -Wno-psabi -mcpu=arm926ej-s -msoft-float"
+		LDFLAGS="$LDFLAGS -L${LIBGAME} -march=armv5 -msoft-float -nostartfiles -T${LIBGAME}/libgame.ld"
 		DEFINES="$DEFINES -DSPMP8000"
 		CXXFLAGS="$CXXFLAGS -I${LIBGAME}"
 		DEFINES="$DEFINES -DSYSTEM_NOT_SUPPORTING_D_TYPE"
