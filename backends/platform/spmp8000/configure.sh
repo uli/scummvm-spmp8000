@@ -9,4 +9,5 @@ test -z "$LIBGAME" && export LIBGAME=../../libgame
     --disable-scalers \
     --disable-translation "$@" \
     --enable-zlib --with-zlib-prefix=$LIBGAME/../3rdparty \
-    --enable-mad --with-mad-prefix=$LIBGAME/../3rdparty
+    --enable-mad --with-mad-prefix=$LIBGAME/../3rdparty \
+    --enable-tremor --with-tremor-prefix=$LIBGAME/../3rdparty
