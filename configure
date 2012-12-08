@@ -3231,7 +3231,7 @@ if test "$_tremor" = yes && test "$_vorbis" = no; then
 		add_line_to_config_h '#define USE_TREMOLO'
 		LIBS="$LIBS $TREMOR_LIBS -ltremolo"
 	else
-		LIBS="$LIBS $TREMOR_LIBS -lvorbisidec"
+		LIBS="$LIBS $TREMOR_LIBS -lvorbisidec -logg"
 	fi
 	INCLUDES="$INCLUDES $TREMOR_CFLAGS"
 else
